@@ -8,10 +8,20 @@ module RubySocialClub
   class Convertor
     include REXML
 
+    SEPARATOR = "\u00a4".freeze
+
     attr_accessor :source_file
 
-    def initialize(src)
+    def self.prepare_irb_session(file)
+      tmp = `cat #{file} | bundle exec irb -f --noreadline --prompt-mode xmp`
+      tmp.gsub!(/\s*#NO=OUTPUT.*?==>/m, "\n ==>")
+      tmp.gsub!(/\s*#NO=RESULT\n\s*==>\s*.*?\n/m, "\n")
+      tmp.gsub!(/\s*\n\s*==>\s*/m, "\t\"thisistheresult_bwdye\"\t")
+    end
+
+    def initialize(src, parse_xmp = false)
       @source_file=src
+      @parse_xmp = parse_xmp
       clear
     end
 
@@ -23,7 +33,7 @@ module RubySocialClub
     def to_html
       return @code_html unless @code_html.nil?
 
-      code= File.read(@source_file)
+      code= File.read(@source_file) #, :encoding => 'ISO_8859_15')
 
       convertor = Syntax::Convertors::HTML.for_syntax "ruby"
       @code_html = convertor.convert( code )
@@ -73,10 +83,23 @@ module RubySocialClub
       end
 
       lines = r.split("\n")
-      lines.map! { | line | "\xa4{#{line.gsub(/^\s*/) { | m | "\\RubyIndent{#{m.gsub(/\t/, '  ').length}}" }}}\xa4" }
+      lines.map! { | line | "#{SEPARATOR}{#{line.gsub(/^\s*/) { | m | "\\RubyIndent{#{m.gsub(/\t/, '  ').length}}" }}}#{SEPARATOR}" }
       @html_latex = lines.join("\n")
+      if @parse_xmp
+        result_to_latex
+      else
+        @html_latex
+      end
     end
 
+
+    def result_to_latex
+      @html_latex.gsub!(/\t"\\codestring\{thisistheresult\\_bwdye\}"\t(.*)#{Regexp.quote(SEPARATOR)}$/,
+                        "\t\\XMPresult{\\1}#{SEPARATOR}")
+      @html_latex.gsub!(/\\codekeyword\{class\t\}"thisistheresult\\_bwdye"\t(.*)#{Regexp.quote(SEPARATOR)}$/,
+                        "class\t\\XMPresult{\\1}#{SEPARATOR}")
+    end
+    protected :result_to_latex
 
     def latexize(str)
       str.gsub(%r!\\|\^|\$|&lt;|&gt;|&amp;|&quot;|#|\{|\}|"|~|_|%| |&!) do | match |
