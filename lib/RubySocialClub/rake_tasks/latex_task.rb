@@ -354,7 +354,7 @@ provided:
   attr_reader:output_dir
   
 # The full path of the output directory
-attr_reader :full_output_dir
+  attr_reader :full_output_dir
 
 #Creates a new +LaTeXRunner+
   def initialize
@@ -380,7 +380,7 @@ attr_reader :full_output_dir
     @output_dir = File.dirname(@task.name.to_s)
     @full_output_dir = File.expand_path(@output_dir)
     deps = find_included_files @main_file, true
-    file(@task.name => deps)
+    Rake::FileTask.define_task(@task.name => deps)
   end
   
 #Sets the main file (the one on which latex is invoked) to _file_. The
@@ -464,18 +464,25 @@ is true, names of non existing files won't be included.
   def find_included_files file, only_existing
     return [] unless File.exist? file
     deps = []
-    File.foreach(file) do |l|
-      sc = StringScanner.new l
-      until sc.eos?
-        if sc.scan( /\\{2}/) or sc.scan(/\\%/) then next
-        elsif sc.scan(/%/) then sc.terminate
-        elsif sc.scan(/\\(?:include|input|includeonly)\{([^}]+)\}/) 
-          new_dep = File.join(@input_dir, sc[1])
-          new_dep += '.tex' unless new_dep.end_with? '.tex'
-          deps << new_dep unless only_existing and !File.exist?(new_dep)
-        else sc.pos += 1
+    begin
+      File.foreach(file) do |l|
+        sc = StringScanner.new(l.encode(Encoding::UTF_8))
+        until sc.eos?
+          if sc.scan( /\\{2}/) or sc.scan(/\\%/) then next
+          elsif sc.scan(/%/) then sc.terminate
+          elsif sc.scan(/\\(?:include|input|includeonly)\{([^}]+)\}/)
+            new_dep = File.join(@input_dir, sc[1])
+            new_dep += '.tex' unless new_dep.end_with? '.tex'
+            unless only_existing and !File.exist?(new_dep)
+              deps << new_dep
+              deps += find_included_files(new_dep, only_existing)
+            end
+          else sc.pos += 1
+          end
         end
       end
+    rescue Exception => e
+      STDERR.puts "ERROR in #{file}. #{e}"
     end
     deps
   end

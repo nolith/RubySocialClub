@@ -15,7 +15,7 @@ Gem::Specification.new do |gem|
   gem.require_paths = ["lib"]
   gem.version       = RubySocialClub::VERSION
 
-  gem.add_dependency 'thor'
+  gem.add_dependency 'rake'
   gem.add_dependency 'syntax'
   gem.add_development_dependency 'rspec'
 end

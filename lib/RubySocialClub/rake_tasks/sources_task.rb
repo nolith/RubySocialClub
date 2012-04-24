@@ -3,7 +3,7 @@
 require 'rake'
 require 'rake/clean'
 
-require 'RubySocialClub/convertor'
+require 'RubySocialClub'
 
 #CLEAN.include('*.o')
 #CLOBBER.include('hello')
