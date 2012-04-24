@@ -98,6 +98,7 @@ module RubySocialClub
                         "\t\\XMPresult{\\1}#{SEPARATOR}")
       @html_latex.gsub!(/\\codekeyword\{class\t\}"thisistheresult\\_bwdye"\t(.*)#{Regexp.quote(SEPARATOR)}$/,
                         "class\t\\XMPresult{\\1}#{SEPARATOR}")
+      @html_latex
     end
     protected :result_to_latex
 
