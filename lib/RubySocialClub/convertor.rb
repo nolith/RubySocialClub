@@ -1,4 +1,4 @@
-# encoding: utf-8
+#encoding: ISO-8859-15 
 require 'rexml/document'
 require 'syntax/convertors/html'
 
@@ -8,12 +8,13 @@ module RubySocialClub
   class Convertor
     include REXML
 
-    SEPARATOR = "\u00a4".freeze
+    SEPARATOR = "\xa4".freeze
 
     attr_accessor :source_file
 
     def self.prepare_irb_session(file)
       tmp = `cat #{file} | bundle exec irb -f --noreadline --prompt-mode xmp`
+      tmp.gsub!(/^\s*Switch to inspect mode\.\s*$/,'')
       tmp.gsub!(/\s*#NO=OUTPUT.*?==>/m, "\n ==>")
       tmp.gsub!(/\s*#NO=RESULT\n\s*==>\s*.*?\n/m, "\n")
       tmp.gsub!(/\s*\n\s*==>\s*/m, "\t\"thisistheresult_bwdye\"\t")
@@ -33,7 +34,7 @@ module RubySocialClub
     def to_html
       return @code_html unless @code_html.nil?
 
-      code= File.read(@source_file) #, :encoding => 'ISO_8859_15')
+      code= File.read(@source_file, :encoding => 'ISO-8859-15')
 
       convertor = Syntax::Convertors::HTML.for_syntax "ruby"
       @code_html = convertor.convert( code )
@@ -42,7 +43,7 @@ module RubySocialClub
     def to_latex
       return @html_latex unless @html_latex.nil?
 
-      text = to_html
+      text = to_html.encode('ISO-8859-15')
 
       file = Document.new text
       body = file.elements['//pre[1]']
@@ -83,7 +84,10 @@ module RubySocialClub
       end
 
       lines = r.split("\n")
-      lines.map! { | line | "#{SEPARATOR}{#{line.gsub(/^\s*/) { | m | "\\RubyIndent{#{m.gsub(/\t/, '  ').length}}" }}}#{SEPARATOR}" }
+      lines.map! do | line | 
+        tmp = line.gsub(/^\s*/) { | m | "\\RubyIndent{#{m.gsub(/\t/, '  ').length}}" }
+        SEPARATOR + tmp.force_encoding('ISO-8859-15')  + SEPARATOR
+      end
       @html_latex = lines.join("\n")
       if @parse_xmp
         result_to_latex

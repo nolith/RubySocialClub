@@ -69,7 +69,7 @@ def generate_file_lists(src)
 
   generate_task_basedfile_list(src_files, 'xmp') do |t, src|
     tmp = RubySocialClub::Convertor.prepare_irb_session src
-    File.open(t.name, 'w') { |f| f << tmp }
+    File.open(t.name, 'w:ISO-8859-15') { |f| f << tmp }
   end
 
   generate_task_basedfile_list(src_files, 'out') do |t, src|
@@ -80,14 +80,14 @@ def generate_file_lists(src)
     puts "#{src} -> #{t.name}"
     c = RubySocialClub::Convertor.new(src)
     latex = c.to_latex
-    File.open(t.name, 'w') { |f| f << latex }
+    File.open(t.name, 'w:ISO-8859-15') { |f| f << latex }
   end
 
   generate_task_basedfile_list(src_files.ext('xmp'), 'xmp.tex') do |t, src|
     puts "#{src} -> #{t.name}"
     c = RubySocialClub::Convertor.new(src, true)
     latex = c.to_latex
-    File.open(t.name, 'w') { |f| f << latex }       
+    File.open(t.name, 'w:ISO-8859-15') { |f| f << latex }       
   end
 
   { :src => src_files, :tex => tex_files, 
