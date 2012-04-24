@@ -1,4 +1,4 @@
-
+require 'fileutils'
 
 module RubySocialClub
 
@@ -60,7 +60,8 @@ module RubySocialClub
       end
     end
 
-    def self.snippettize_dir(src='.', out='snippets')
+    def self.snippettize_dir(src='.', out=File.join(src,'snippets'))
+      FileUtils.mkdir(out) unless Dir.exist? out
       Dir[File.join(src, '*.rb')].each do | filename |
         puts "Splitting #{filename}"
         File.open(filename) do | file |
@@ -81,6 +82,7 @@ module RubySocialClub
           output.close if output
         end
       end
+      out
     end
   end
 end

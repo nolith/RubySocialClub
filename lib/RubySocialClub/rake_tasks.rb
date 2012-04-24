@@ -25,32 +25,14 @@ require 'RubySocialClub/convertor'
 #file 'main.o' => ['main.c', 'greet.h']
 #file 'greet.o' => ['greet.c']
 
-rule '.xmp' => '.rb' do |t|
-  tmp = RubySocialClub::Convertor.prepare_irb_session t.source
-  File.open(t.name, 'w') { |f| f << tmp }
-end
-
-rule '.out' => '.rb' do |t|
-  sh "bundle exec ruby #{t.source} > #{t.name} 2>&1 ; true"
-end
-
-rule '.tex' => '.rb' do |t|
-  puts "#{t.source} -> #{t.name}"
-  c = RubySocialClub::Convertor.new(t.source)
-  latex = c.to_latex
-  File.open(t.name, 'w') { |f| f << latex }
-end
-
 def ruby_source(src)
 
-  src_files = FileList[File.join(src, '*.rb')]
-  tex_files = src_files.ext('tex')
-  irb_tex_files = src_files.ext('xmp.tex')
-  output_files = src_files.ext('out')
+  files = generate_file_lists(src)
 
-  CLEAN.include(File.join(src, '*.tex'))
-  CLEAN.include(File.join(src, '*.xmp'))
-  CLEAN.include(File.join(src, '*.out'))
+  src_files = files[:src]
+  tex_files = files[:tex]
+  irb_tex_files = files[:irb]
+  output_files = files[:output]
 
   desc "Generates all the source examples"
   task :sources => tex_files
@@ -61,16 +43,66 @@ def ruby_source(src)
   desc "Executes all the source examples"
   task :output => output_files
 
-  src_files.ext('xmp').each do |xmp_file|
-    xmp_tex = xmp_file.clone
-    xmp_tex[-3..-1] = 'xmp.tex'
-
-    file xmp_tex => xmp_file do |t|
-      src = t.prerequisites[0]
-      puts "#{src} -> #{t.name}"
-      c = RubySocialClub::Convertor.new(src, true)
-      latex = c.to_latex
-      File.open(t.name, 'w') { |f| f << latex }       
-    end
+  desc "Generates snippets" 	
+  task :snippets do
+    snippet_src = RubySocialClub::Snippet.snippettize_dir(src)
+    puts "snippets in #{snippet_src}"
+    snippet_files = generate_file_lists(snippet_src)
+    
+    task :snp_all => snippet_files[:tex]
+    task :snp_all => snippet_files[:irb]
+    task :snp_all => snippet_files[:output]
+    Rake::Task[:snp_all].invoke 
   end
+  CLEAN.include(File.join(src, 'snippets', '*.rb'))
 end
+
+def generate_file_lists(src)
+  src_files = FileList[File.join(src, '*.rb')]
+  tex_files = src_files.ext('tex')
+  irb_tex_files = src_files.ext('xmp.tex')
+  output_files = src_files.ext('out')
+
+  CLEAN.include(File.join(src, '*.tex'))
+  CLEAN.include(File.join(src, '*.xmp'))
+  CLEAN.include(File.join(src, '*.out'))
+
+  generate_task_basedfile_list(src_files, 'xmp') do |t, src|
+    tmp = RubySocialClub::Convertor.prepare_irb_session src
+    File.open(t.name, 'w') { |f| f << tmp }
+  end
+
+  generate_task_basedfile_list(src_files, 'out') do |t, src|
+    sh "bundle exec ruby #{src} > #{t.name} 2>&1 ; true"
+  end
+
+  generate_task_basedfile_list(src_files, 'tex') do |t, src|
+    puts "#{src} -> #{t.name}"
+    c = RubySocialClub::Convertor.new(src)
+    latex = c.to_latex
+    File.open(t.name, 'w') { |f| f << latex }
+  end
+
+  generate_task_basedfile_list(src_files.ext('xmp'), 'xmp.tex') do |t, src|
+    puts "#{src} -> #{t.name}"
+    c = RubySocialClub::Convertor.new(src, true)
+    latex = c.to_latex
+    File.open(t.name, 'w') { |f| f << latex }       
+  end
+
+  { :src => src_files, :tex => tex_files, 
+    :irb => irb_tex_files, :output => output_files }
+end
+
+def generate_task_basedfile_list(file_list, new_ext)
+  file_list.each do |src_file|
+    dst_file = src_file.clone
+    src_ext_len = File.extname(src_file).length() -1
+    dst_file[-src_ext_len..-1] = new_ext
+    #puts "Generating rule #{src_file} -> #{dst_file}"
+    file dst_file => src_file do |t|
+      yield [t, t.prerequisites[0]]       
+    end
+  end  
+end
+
